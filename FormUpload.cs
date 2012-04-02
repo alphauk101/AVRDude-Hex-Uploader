@@ -95,6 +95,9 @@ namespace AVRHexUploader
                 comboPorts.SelectedIndex = 0;
 
             }
+
+            // Grab the location of avrdude and the conf file from the settings file,
+            // and if the location is not know, ask for it.
             avrdudeLocation = AVRHexUploader.Properties.Settings.Default.avrdude;
             confLocation = AVRHexUploader.Properties.Settings.Default.conf;
             if (avrdudeLocation == "")
@@ -110,6 +113,8 @@ namespace AVRHexUploader
                 AVRHexUploader.Properties.Settings.Default.conf = confLocation;
 
             }
+
+            // Load the previous settings from the configuration file.
             labelHex.Text = AVRHexUploader.Properties.Settings.Default.hex;
             checkVerbose.Checked = AVRHexUploader.Properties.Settings.Default.verbose;
             checkForce.Checked = AVRHexUploader.Properties.Settings.Default.force;
@@ -118,6 +123,9 @@ namespace AVRHexUploader
             textHighByte.Text = AVRHexUploader.Properties.Settings.Default.highbyte;
             textExtendedByte.Text = AVRHexUploader.Properties.Settings.Default.extendedbyte;
             checkSetFuses.Checked = AVRHexUploader.Properties.Settings.Default.fuse;
+
+            // These often break if it is the first time the program is run, so catch
+            // troublesome values (or nulls, in this case) and set to 0 instead.
             try
             {
                 comboProgrammer.SelectedIndex = AVRHexUploader.Properties.Settings.Default.programmer;
@@ -142,24 +150,35 @@ namespace AVRHexUploader
             {
                 comboChip.SelectedIndex = 0;
             }
+
+            // We keep track of the number of chips in the listing file and warn the user if the
+            // number of chips has changed from the last time the program was run. Currently has
+            // the downside of triggering on the first time the app is run also.
+            // TODO: Fix this so that the program no longer warns the user the first time it is run.
             if (comboChip.Items.Count != AVRHexUploader.Properties.Settings.Default.chipscount)
             {
-                MessageBox.Show("The chip listing file appears to have changed.\r\nCheck you have the correct chip selected before continuing.",
-        "Warning",
-        MessageBoxButtons.OK,
-        MessageBoxIcon.Warning
-        );
+                MessageBox.Show("The chip listing file appears to have changed.\r\n" +
+                                "Check you have the correct chip selected before continuing.",
+                                "Warning",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Warning
+                                );
 
             }
+
+            // Do the same with the programmers file listing.
             if (comboProgrammer.Items.Count != AVRHexUploader.Properties.Settings.Default.programmercount)
             {
-                MessageBox.Show("The programmer listing file appears to have changed.\r\nCheck you have the correct programmer selected before continuing.",
-        "Warning",
-        MessageBoxButtons.OK,
-        MessageBoxIcon.Warning
-        );
+                MessageBox.Show("The programmer listing file appears to have changed.\r\n" + 
+                                "Check you have the correct programmer selected before continuing.",
+                                "Warning",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Warning
+                                );
 
             }
+
+            // Recreate the command line argument
             updateCommand(sender, e);
 
 
@@ -255,11 +274,12 @@ namespace AVRHexUploader
             }
             catch (Exception exc)
             {
-                MessageBox.Show("There was a problem executing this command. Check that you have the correct programmer selected and it is connected properly. \r\n\r\n(" + exc.Message + ")",
-                        "Error",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error
-                        );
+                MessageBox.Show("There was a problem executing this command. Check that you have the correct programmer selected and it is connected properly. \r\n\r\n" + 
+                                "(" + exc.Message + ")",
+                                "Error",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Error
+                                );
             }
             FormUpload.ActiveForm.Cursor = Cursors.Arrow;
             textBoxOutput.Cursor = Cursors.IBeam;
@@ -269,26 +289,6 @@ namespace AVRHexUploader
 
         }
 
-        delegate void updateTextDelegate(string newText);
-        private void updateText(string newText)
-        {
-            if (textBoxOutput.InvokeRequired)
-            {
-                // this is worker thread
-                updateTextDelegate del = new updateTextDelegate(updateText);
-                textBoxOutput.Invoke(del, new object[] { newText });
-            }
-            else
-            {
-                // this is UI thread
-                textBoxOutput.Text = textBoxOutput.Text + newText;
-            }
-        }
-
-        void proc_DataReceived(object sender, DataReceivedEventArgs e)
-        {
-            updateText(e.Data);
-        }
 
         private void checkSetFuses_CheckedChanged(object sender, EventArgs e)
         {
