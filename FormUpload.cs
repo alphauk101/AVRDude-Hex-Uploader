@@ -1,4 +1,26 @@
-﻿using System;
+﻿/*
+ * Copyright (c) 2012 Aidan Dunbar
+ * -------------------------------
+ * Permission is hereby granted, free of charge, to any person obtaining a 
+ * copy of this software and associated documentation files (the "Software"), 
+ * to deal in the Software without restriction, including without limitation 
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
+ * and/or sell copies of the Software, and to permit persons to whom the 
+ * Software is furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included 
+ * in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS 
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+*/
+
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -20,6 +42,10 @@ namespace AVRHexUploader
         String appName = "AVRDude Hex Uploader";
         String avrdudeLocation = "";
         String confLocation = "";
+
+        // To handle ending the process and returning the output
+        delegate void finishedProcessDelegate(string output);
+
         public FormUpload()
         {
             InitializeComponent();
@@ -152,10 +178,8 @@ namespace AVRHexUploader
             }
 
             // We keep track of the number of chips in the listing file and warn the user if the
-            // number of chips has changed from the last time the program was run. Currently has
-            // the downside of triggering on the first time the app is run also.
-            // TODO: Fix this so that the program no longer warns the user the first time it is run.
-            if (comboChip.Items.Count != AVRHexUploader.Properties.Settings.Default.chipscount)
+            // number of chips has changed from the last time the program was run.
+            if (comboChip.Items.Count != AVRHexUploader.Properties.Settings.Default.chipscount & AVRHexUploader.Properties.Settings.Default.chipscount != 0)
             {
                 MessageBox.Show("The chip listing file appears to have changed.\r\n" +
                                 "Check you have the correct chip selected before continuing.",
@@ -167,7 +191,7 @@ namespace AVRHexUploader
             }
 
             // Do the same with the programmers file listing.
-            if (comboProgrammer.Items.Count != AVRHexUploader.Properties.Settings.Default.programmercount)
+            if (comboProgrammer.Items.Count != AVRHexUploader.Properties.Settings.Default.programmercount & AVRHexUploader.Properties.Settings.Default.programmercount != 0)
             {
                 MessageBox.Show("The programmer listing file appears to have changed.\r\n" + 
                                 "Check you have the correct programmer selected before continuing.",
@@ -189,18 +213,29 @@ namespace AVRHexUploader
 
         }
 
+        // This function builds the command line string that will be sent
+        // to AVRDude. It looks complicated, but it's not really. 
         private void updateCommand(object sender, EventArgs e)
         {
-            if (comboProgrammer.Text != "" && comboPorts.Text != "" && comboChip.Text != "" && labelHex.Text != "Select Hex File" && labelHex.Text != "*.hex")
+            if (comboProgrammer.Text != "" && 
+                comboPorts.Text != "" && 
+                comboChip.Text != "" && 
+                labelHex.Text != "Select Hex File" && 
+                labelHex.Text != "*.hex")
             {
 
 
-                String command = "\"" + avrdudeLocation + "\" -C \"" + confLocation + "\" -c " + programmerDude[comboProgrammer.SelectedIndex] + " -p " +
-    chipDude[comboChip.SelectedIndex] + " -U flash:w:\"" + labelHex.Text + "\":i ";
+                String command = "\"" + avrdudeLocation + 
+                                 "\" -C \"" + confLocation + 
+                                 "\" -c " + programmerDude[comboProgrammer.SelectedIndex] + 
+                                 " -p " + chipDude[comboChip.SelectedIndex] + 
+                                 " -U flash:w:\"" + labelHex.Text + "\":i ";
+
                 if (checkSelectPort.Checked == true)
                 {
                     command = command + "-P " + comboPorts.Text + " ";
                 }
+
                 if (checkVerbose.Checked == true)
                 {
                     command = command + "-v ";
@@ -210,12 +245,17 @@ namespace AVRHexUploader
                 {
                     textBoxOutput.WordWrap = true;
                 }
+
                 if (checkForce.Checked == true)
                 {
                     command = command + "-F ";
                 }
+
                 if (checkSetFuses.Checked == true)
                 {
+                    // If the text boxes are blank, ignore that fuse byte.
+                    // As of yet we don't check if the fuse we are trying to burn is valid.
+                    // TODO: Check if AVRDude validates fuses.
                     if (textLowByte.Text != "")
                     {
                         command = command + " -U lfuse:w:0x" + textLowByte.Text + ":m";
@@ -229,6 +269,7 @@ namespace AVRHexUploader
                         command = command + " -U efuse:w:0x" + textExtendedByte.Text + ":m";
                     }
                 }
+
                 textCommand.Text = command;
             }
         }
@@ -236,56 +277,17 @@ namespace AVRHexUploader
         private void buttonUpload_Click(object sender, EventArgs e)
         {
 
-            try
-            {
+
                 FormUpload.ActiveForm.Cursor = Cursors.WaitCursor;
                 textBoxOutput.Cursor = Cursors.WaitCursor;
                 FormUpload.ActiveForm.Text += " - Uploading...";
 
                 textBoxOutput.Text = "";
                 textBoxOutput.Text += "(DO NOT RESET OR TURN OFF UNTIL THIS COMPLETES)\r\n";
-                Process avrprog = new Process();
-                StreamReader avrstdout, avrstderr;
-                StreamWriter avrstdin;
+
                 FormUpload.ActiveForm.Height = 560;
 
-                ProcessStartInfo psI = new ProcessStartInfo("cmd");
-
-                psI.UseShellExecute = false;
-                psI.RedirectStandardInput = true;
-                psI.RedirectStandardOutput = true;
-                psI.RedirectStandardError = true;
-                psI.CreateNoWindow = true;
-                avrprog.StartInfo = psI;
-                avrprog.Start();
-                avrstdin = avrprog.StandardInput;
-                avrstdout = avrprog.StandardOutput;
-                avrstderr = avrprog.StandardError;
-                avrstdin.AutoFlush = true;
-                avrstdin.WriteLine(textCommand.Text);
-                avrstdin.Close();
-                textBoxOutput.Text = avrstdout.ReadToEnd();
-                textBoxOutput.Text += avrstderr.ReadToEnd();
-                FormUpload.ActiveForm.Cursor = Cursors.Arrow;
-                textBoxOutput.Cursor = Cursors.IBeam;
-                FormUpload.ActiveForm.Text = appName;
-                textBoxOutput.SelectionStart = textBoxOutput.Text.Length;
-                textBoxOutput.ScrollToCaret();
-            }
-            catch (Exception exc)
-            {
-                MessageBox.Show("There was a problem executing this command. Check that you have the correct programmer selected and it is connected properly. \r\n\r\n" + 
-                                "(" + exc.Message + ")",
-                                "Error",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Error
-                                );
-            }
-            FormUpload.ActiveForm.Cursor = Cursors.Arrow;
-            textBoxOutput.Cursor = Cursors.IBeam;
-            FormUpload.ActiveForm.Text = appName;
-            textBoxOutput.SelectionStart = textBoxOutput.Text.Length;
-            textBoxOutput.ScrollToCaret();
+                backgroundWorker.RunWorkerAsync(textCommand.Text);
 
         }
 
@@ -312,12 +314,10 @@ namespace AVRHexUploader
             if (checkSelectPort.Checked == true)
             {
                 comboPorts.Enabled = true;
-
             }
             else
             {
                 comboPorts.Enabled = false;
-
             }
             updateCommand(sender, e);
         }
@@ -352,11 +352,13 @@ namespace AVRHexUploader
 
         private void FormUpload_HelpButtonClicked(object sender, CancelEventArgs e)
         {
-            System.Diagnostics.Process.Start("http://www.aidandunbar.co.uk/electronics");
+            // Open the webpage where they can find more information and help
+            System.Diagnostics.Process.Start("http://www.adnbr.co.uk/projects/avrdude-hex-uploader");
         }
 
         private void FormUpload_FormClosing(object sender, FormClosingEventArgs e)
         {
+            // Save all the settings ready for next use.
             AVRHexUploader.Properties.Settings.Default.hex = labelHex.Text;
             AVRHexUploader.Properties.Settings.Default.chip = comboChip.SelectedIndex;
             AVRHexUploader.Properties.Settings.Default.programmer = comboProgrammer.SelectedIndex;
@@ -385,9 +387,63 @@ namespace AVRHexUploader
 
         }
 
+        private void finishedProcess(string output)
+        {
+            // Returned console output to the display
+            textBoxOutput.Text = output;
+
+            // Reset all the window chrome back to normal.
+            FormUpload.ActiveForm.Cursor = Cursors.Arrow;
+            textBoxOutput.Cursor = Cursors.IBeam;
+            FormUpload.ActiveForm.Text = appName;
+
+            // Scroll to the end of the text box to show the important data
+            textBoxOutput.SelectionStart = textBoxOutput.Text.Length;
+            textBoxOutput.ScrollToCaret();
+        }
+
         private void backgroundWorker_DoWork(object sender, DoWorkEventArgs e)
         {
+            // This is the default response, it gets replaced if everything runs smoothly.
+            string returnText = "Nothing was returned. Perhaps the command didn't run at all?";
+            try
+            {
+                Process avrprog = new Process();
+                StreamReader avrstdout, avrstderr;
+                StreamWriter avrstdin;
+                string command = (string)e.Argument;
+                
+                ProcessStartInfo psI = new ProcessStartInfo("cmd");
+                psI.UseShellExecute = false;
+                psI.RedirectStandardInput = true;
+                psI.RedirectStandardOutput = true;
+                psI.RedirectStandardError = true;
+                psI.CreateNoWindow = true;
+                avrprog.StartInfo = psI;
+                avrprog.Start();
+                avrstdin = avrprog.StandardInput;
+                avrstdout = avrprog.StandardOutput;
+                avrstderr = avrprog.StandardError;
+                avrstdin.AutoFlush = true;
+                avrstdin.WriteLine(command);
+                avrstdin.Close();
+                returnText = avrstdout.ReadToEnd();
+                returnText += avrstderr.ReadToEnd();
+            }
+            catch (Exception exc)
+            {
+                MessageBox.Show("There was a problem executing this command. Check that you have the correct programmer selected and it is connected properly. \r\n\r\n" +
+                                "(" + exc.Message + ")",
+                                "Error",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Error
+                                );
+            }
 
+            // Update the UI, we're done here.
+            Invoke(new finishedProcessDelegate(finishedProcess), returnText);
+
+            // Fin.
         }
 
     }
