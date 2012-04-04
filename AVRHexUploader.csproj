@@ -50,7 +50,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>Hardware-Chip.ico</ApplicationIcon>
+    <ApplicationIcon>oxygen-media-flash-3.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
     <ManifestCertificateThumbprint>D0C05129474B86E31C80E3B425CDB9530F34D3D3</ManifestCertificateThumbprint>
@@ -109,12 +109,12 @@
       <DependentUpon>Settings.settings</DependentUpon>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
-    <Content Include="Hardware-Chip.ico" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="chips.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="oxygen-media-flash-3.ico" />
     <Content Include="programmers.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

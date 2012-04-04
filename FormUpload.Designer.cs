@@ -110,9 +110,9 @@
             // 
             // buttonLocate
             // 
-            this.buttonLocate.Location = new System.Drawing.Point(446, 156);
+            this.buttonLocate.Location = new System.Drawing.Point(446, 155);
             this.buttonLocate.Name = "buttonLocate";
-            this.buttonLocate.Size = new System.Drawing.Size(75, 23);
+            this.buttonLocate.Size = new System.Drawing.Size(75, 24);
             this.buttonLocate.TabIndex = 13;
             this.buttonLocate.Text = "Locate...";
             this.toolTip.SetToolTip(this.buttonLocate, "Locate the AVRDude Executable and Configuration Files");

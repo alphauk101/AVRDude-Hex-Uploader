@@ -392,7 +392,7 @@ namespace AVRHexUploader
             // Returned console output to the display
             textBoxOutput.Text = output;
 
-            // Reset all the window chrome back to normal.
+            // Reset all the window chrome back to normal
             FormUpload.ActiveForm.Cursor = Cursors.Arrow;
             textBoxOutput.Cursor = Cursors.IBeam;
             FormUpload.ActiveForm.Text = appName;
